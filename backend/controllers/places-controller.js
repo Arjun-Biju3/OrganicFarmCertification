@@ -1,119 +1,159 @@
-const { v4: uuidv4 } = require('uuid');
-const {validationResult} = require('express-validator')
+const {validationResult} = require('express-validator');
+const mongoose = require('mongoose');
 
-const HttError = require('../models/http-error')
-
-let DUMMY_PLACES = [
-    {
-      id: 'p1',
-      imageUrl: "https://imgcdn.stablediffusionweb.com/2024/3/15/936ea4ae-7b3d-4722-b5b7-9a29f5d15606.jpg",
-      title: 'Beautiful Lake View',
-      description: 'A breathtaking lake surrounded by mountains.',
-      address: '123 Lakeview St, Mountain Town, Country',
-      creator: 'u1',
-      location: { lat: 40.748817, lng: -73.985428 }
-    },
-    {
-        id: 'p4',
-        imageUrl: "https://imgcdn.stablediffusionweb.com/2024/3/15/936ea4ae-7b3d-4722-b5b7-9a29f5d15606.jpg",
-        title: 'Beautiful Lake View',
-        description: 'A breathtaking lake surrounded by mountains.',
-        address: '123 Lakeview St, Mountain Town, Country',
-        creator: 'u1',
-        location: { lat: 40.748817, lng: -73.985428 }
-      },
-    {
-      id: 'p2',
-      imageUrl: 'https://source.unsplash.com/400x300/?city,night',
-      title: 'City Skyline at Night',
-      description: 'A stunning view of the city lights from the rooftop.',
-      address: '456 Downtown Blvd, Metropolis, Country',
-      creator: 'u2',
-      location: { lat: 34.052235, lng: -118.243683 }
-    },
-    {
-      id: 'p3',
-      imageUrl: 'https://source.unsplash.com/400x300/?forest,path',
-      title: 'Peaceful Forest Walk',
-      description: 'A quiet and scenic trail through dense woods.',
-      address: '789 Woodland Trail, Green Valley, Country',
-      creator: 'u3',
-      location: { lat: 51.507351, lng: -0.127758 }
-    }
-  ];
+const HttpError = require('../models/http-error');
+const Place = require('../models/place');
+const User = require('../models/user')
 
 
-const getPlaceById =  (req, res, next) => {
+
+const getPlaceById = async (req, res, next) => {
     const pid = req.params.pid;
-    const place = DUMMY_PLACES.find(p => p.id === pid);
-    
-    if (!place) {
-      throw new HttError("Could not find a place for the provided place id",404); 
+    let place;
+  try{
+     place = await Place.findById(pid);
+  }
+  catch(err){
+    return next(new HttpError('Something went wrong, could not find a place.',500));
+  }
+
+    if (!place) { 
+      return next(new HttpError("Could not find a place for the provided place id",404));
     }
     
-    res.json({ place });
+    res.json({ place:place.toObject({getters:true}) });
   }
 
 
-const getPlaceByUserId = (req, res, next) => {
+const getPlaceByUserId = async (req, res, next) => {
     const uid = req.params.uid;
-    const places = DUMMY_PLACES.filter(p => p.creator === uid);
-    
+    let places
+   try{
+     places =await Place.find({creator:uid});
+   }
+   catch(err){
+      return next(new HttpError("Could not find a place for the provided user id",500));
+   }
     if (!places || places.length === 0) {
-      throw new HttError("Could not find a places for the provided user id",404);
+      return next(new HttpError("Could not find a places for the provided user id",404));
     }
     
-    res.json({ places });
+    res.json({ places:places.map(place=>place.toObject({getters:true})) });
   }
 
 
-const createPlaces = (req, res, next)=>{
+const createPlaces = async (req, res, next)=>{
     const errors = validationResult(req);
     if(!errors.isEmpty()){
       console.log(errors);
-      
-      throw new HttError("Invalid inputs passed, please check your data",422)
+      return next(new HttpError("Invalid inputs passed, please check your data",422))
     }
     const {title,description,coordinates,address,creator} = req.body;
-    const createdPlace = {
-        id:uuidv4(),
-        title,
-        description,
-        location:coordinates,
-        address,
-        creator
-    };
-    DUMMY_PLACES.push(createdPlace)
+    const createdPlace = new Place({
+      title,
+      description,
+      address,
+      location:coordinates,
+      image:"https://www.google.com/imgres?q=nature%20images&imgurl=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fthumbnails%2F049%2F855%2F296%2Fsmall_2x%2Fnature-background-high-resolution-wallpaper-for-a-serene-and-stunning-view-photo.jpg&imgrefurl=https%3A%2F%2Fwww.vecteezy.com%2Ffree-photos%2F4k-nature&docid=QPoY9d5rgesGjM&tbnid=2F16SnveSNiQEM&vet=12ahUKEwiktdy5ju6LAxX3nK8BHZarCWgQM3oECDQQAA..i&w=714&h=400&hcb=2&ved=2ahUKEwiktdy5ju6LAxX3nK8BHZarCWgQM3oECDQQAA",
+      creator
+    });
+
+
+    let user;
+    try{
+      user = await User.findById(creator)
+    }
+    catch(error){
+      return next(new HttpError('creating place failed, please try again',500));
+    }
+
+
+    if(!user){
+      return next(new HttpError("could not find user for provided id",404));
+    }
+
+    try{
+      const sess = await mongoose.startSession();
+      sess.startTransaction();
+      await createdPlace.save({session:sess});
+      user.places.push(createdPlace);
+      await user.save({session:sess});
+      sess.commitTransaction();
+    }
+    catch(err){
+      return next(new HttpError('creating place failed, please try again.',500));
+    }
+
     res.status(201).json({createdPlace});
 }
 
 
-const updatePlaceById = (req, res, next)=>{
+const updatePlaceById =async (req, res, next)=>{
   const errors = validationResult(req);
     if(!errors.isEmpty()){
       console.log(errors);
       
-      throw new HttError("Invalid inputs passed, please check your data",422)
+      throw new HttpError("Invalid inputs passed, please check your data",422)
     }
     const {title,description} = req.body;
     const pid = req.params.pid;
-    const updatedPlace = {...DUMMY_PLACES.find(p=> p.id === pid)};
-    const placeIndex = DUMMY_PLACES.findIndex(p=>p.id === pid)
-    updatedPlace.title = title;
-    updatedPlace.description = description;
-    DUMMY_PLACES[placeIndex] = updatedPlace;
-
-    res.status(200).json({updatedPlace});
-}
-
-const deletePlaceById = (req, res, next)=>{
-    const pid = req.params.pid;
-    if(!DUMMY_PLACES.find(p=>p.id === pid)){
-      throw new HttError("Could not find a place for that id",401)
+    
+    let place;
+    try{
+      place = await Place.findById(pid);
     }
-    DUMMY_PLACES = DUMMY_PLACES.filter(p=>p.id !== pid)
-    res.status(200).json({message:'deleted place'})
+    catch(error){
+      return next(new HttpError('Something went wrong, please try again.',500));
+    }
+
+    place.title = title;
+    place.description = description;
+    
+    try{
+      await place.save();
+    }
+    catch(error){
+      return next(new HttpError('Something went wrong, please try again.',500));
+    }
+    res.status(200).json({place:place.toObject({getters:true})});
 }
+
+
+const deletePlaceById = async (req, res, next) => {
+  const pid = req.params.pid;
+  let place;
+
+  try {
+    place = await Place.findById(pid).populate('creator');
+    if (!place) {
+      return next(new HttpError("Could not find a place with the provided ID.", 404));
+    }
+  } catch (error) {
+    return next(new HttpError("Something went wrong, could not find the place.", 500));
+  }
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    
+    
+    await place.deleteOne({ session: sess });
+
+
+    if (place.creator) {
+      place.creator.places.pull(place);
+      await place.creator.save({ session: sess });
+    }
+
+    await sess.commitTransaction();
+    sess.endSession(); 
+  } catch (error) {
+    return next(new HttpError("Something went wrong. Unable to delete, please try again.", 500));
+  }
+
+  res.status(200).json({ message: "Deleted place successfully" });
+};
+
 
 exports.getPlaceById = getPlaceById;
 exports.getPlaceByUserId = getPlaceByUserId;
