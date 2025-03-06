@@ -9,6 +9,8 @@ const placesRoutes = require('./routes/places-routes')
 const usersRoutes = require('./routes/users-routes')
 const HttError = require("./models/http-error")
 
+const port = process.env.PORT || 5000
+
 const app = express();
 
 app.use(bodyParser.json());
@@ -46,7 +48,7 @@ app.use((error, req, res, next)=>{
 })
 
 mongoose.connect("mongodb+srv://arjunbiju322:N0fz9tM39vjsM3L7@cluster0.gey9y.mongodb.net/placesdb?retryWrites=true&w=majority&appName=Cluster0").then(()=>{
-    app.listen(5000);
+    app.listen(port);
 }).catch(err=>{
     console.log(err);
 });
