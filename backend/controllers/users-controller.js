@@ -1,4 +1,6 @@
 const {validationResult} = require('express-validator')
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const HttpError = require('../models/http-error')
 const User = require('../models/user')
@@ -25,6 +27,8 @@ const signup =async (req, res, next)=>{
     }
     const {name, email, password} = req.body;
 
+
+
     let existingUser;
     try{
         existingUser = await User.findOne({email:email})
@@ -36,11 +40,18 @@ const signup =async (req, res, next)=>{
         return next(new HttpError('User exists already, please login instead',422));
     }
 
+    let hashedPassword;
+    try{
+        hashedPassword = await bcrypt.hash(password,12);
+    }
+    catch(err){
+        return next(new HttpError('Could not create user, please try again.',500))
+    }
     const createdUser = new User({
             name,
             email,
-            image:"https://www.google.com/imgres?q=nature%20images&imgurl=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fthumbnails%2F049%2F855%2F296%2Fsmall_2x%2Fnature-background-high-resolution-wallpaper-for-a-serene-and-stunning-view-photo.jpg&imgrefurl=https%3A%2F%2Fwww.vecteezy.com%2Ffree-photos%2F4k-nature&docid=QPoY9d5rgesGjM&tbnid=2F16SnveSNiQEM&vet=12ahUKEwiktdy5ju6LAxX3nK8BHZarCWgQM3oECDQQAA..i&w=714&h=400&hcb=2&ved=2ahUKEwiktdy5ju6LAxX3nK8BHZarCWgQM3oECDQQAA",
-            password,
+            image: req.file.path,
+            password:hashedPassword,
             places:[]
     })
     
@@ -52,7 +63,17 @@ const signup =async (req, res, next)=>{
     }
 
 
-    res.status(201).json({user:createdUser.toObject({getters:true})});
+    let token;
+    try{
+    token = jwt.sign({userId:createdUser.id,email:createdUser.email},
+        'supersecret_dont_share',
+        {expiresIn:'1h'});
+    }
+    catch(error){
+        return next(new HttpError('Signing up failed, please try again',500));
+    }
+
+    res.status(201).json({userId:createdUser.id,email:createdUser.email,token: token});
 
 }
 
@@ -66,11 +87,34 @@ const login = async (req, res, next) => {
         return next(new HttpError('Logging in failed, please try again later.', 500));
     }
 
-    if (!existingUser || existingUser.password !== password) {
+    let isValidPassword = false;
+    try{
+        isValidPassword = await bcrypt.compare(password,existingUser.password);
+    }
+    catch(error){
+        return next(new HttpError('Could not log you in, Please check your credentials and try again.',500))
+    }
+
+    if(!isValidPassword){
         return next(new HttpError("Invalid credentials, could not log you in", 401));
     }
 
-    res.json({ message: "logged in" });
+    if (!existingUser) {
+        return next(new HttpError("Invalid credentials, could not log you in", 401));
+    }
+
+    let token;
+    try{
+        token = jwt.sign({userId:existingUser.id,email:existingUser.email},
+            'supersecret_dont_share',
+            {expiresIn:'1h'});
+        }
+        catch(error){
+            return next(new HttpError('Logging in failed, please try again',500));
+        }
+    
+
+    res.json({ userId:existingUser.id,email: existingUser.email, token: token });
 };
 
 

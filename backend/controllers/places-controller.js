@@ -1,5 +1,6 @@
 const {validationResult} = require('express-validator');
 const mongoose = require('mongoose');
+const fs = require('fs');
 
 const HttpError = require('../models/http-error');
 const Place = require('../models/place');
@@ -43,25 +44,30 @@ const getPlaceByUserId = async (req, res, next) => {
 
 
 const createPlaces = async (req, res, next)=>{
+
+  const coordinates ={
+    lat:5675678,
+    lon:5678567,
+  }
     const errors = validationResult(req);
     if(!errors.isEmpty()){
       console.log(errors);
       return next(new HttpError("Invalid inputs passed, please check your data",422))
     }
-    const {title,description,coordinates,address,creator} = req.body;
+    const {title,description,address} = req.body;
     const createdPlace = new Place({
       title,
       description,
       address,
       location:coordinates,
-      image:"https://www.google.com/imgres?q=nature%20images&imgurl=https%3A%2F%2Fstatic.vecteezy.com%2Fsystem%2Fresources%2Fthumbnails%2F049%2F855%2F296%2Fsmall_2x%2Fnature-background-high-resolution-wallpaper-for-a-serene-and-stunning-view-photo.jpg&imgrefurl=https%3A%2F%2Fwww.vecteezy.com%2Ffree-photos%2F4k-nature&docid=QPoY9d5rgesGjM&tbnid=2F16SnveSNiQEM&vet=12ahUKEwiktdy5ju6LAxX3nK8BHZarCWgQM3oECDQQAA..i&w=714&h=400&hcb=2&ved=2ahUKEwiktdy5ju6LAxX3nK8BHZarCWgQM3oECDQQAA",
-      creator
+      image: req.file.path,
+      creator:req.userData.userId
     });
 
 
     let user;
     try{
-      user = await User.findById(creator)
+      user = await User.findById(req.userData.userId)
     }
     catch(error){
       return next(new HttpError('creating place failed, please try again',500));
@@ -106,6 +112,10 @@ const updatePlaceById =async (req, res, next)=>{
       return next(new HttpError('Something went wrong, please try again.',500));
     }
 
+    if(place.creator.toString() !== req.userData.userId){
+      return next(new HttpError('You are not allowed to edit this place.',401)); 
+    }
+
     place.title = title;
     place.description = description;
     
@@ -132,6 +142,12 @@ const deletePlaceById = async (req, res, next) => {
     return next(new HttpError("Something went wrong, could not find the place.", 500));
   }
 
+  if(place.creator.id !== req.userData.userId){
+    return next(new HttpError('You are not allowed to delete this place.',401)); 
+  }
+
+  const imagePath = place.image;
+
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
@@ -150,6 +166,10 @@ const deletePlaceById = async (req, res, next) => {
   } catch (error) {
     return next(new HttpError("Something went wrong. Unable to delete, please try again.", 500));
   }
+
+  fs.unlink(imagePath,err=>{
+    console.log(err);
+  });
 
   res.status(200).json({ message: "Deleted place successfully" });
 };

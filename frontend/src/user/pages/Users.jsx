@@ -1,17 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import UserList from '../components/UsersList';
+import ErrorModal from '../../shared/components/UIElements/ErrorModal';
+import LoadingSpinner from '../../shared/components/UIElements/LoadingSpinner';
+import { useHttpClient } from '../../shared/hooks/http-hook';
 
 function Users() {
-    const USERS = [
-        {
-            id: "u1",
-            name: "Arjun",
-            image: "https://imgcdn.stablediffusionweb.com/2024/3/15/936ea4ae-7b3d-4722-b5b7-9a29f5d15606.jpg",
-            places: 2
-        }
-    ];
+    const {isLoading,sendRequest,error,clearError} = useHttpClient();
+    const [loadedUsers, setLoadedUsers] = useState();
 
-    return <UserList items={USERS} />;
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+               
+                const responseData = await sendRequest('http://localhost:5000/api/users/');
+            
+                setLoadedUsers(responseData.users);
+            } catch (error) {} 
+        };
+
+        fetchUsers(); 
+    }, [sendRequest]);
+
+
+
+    return (
+        <React.Fragment>
+            <ErrorModal error={error} onClear={clearError} />
+            {isLoading && (
+                <div className='center'>
+                    <LoadingSpinner />
+                </div>
+            )}
+            {!isLoading && loadedUsers && <UserList items={loadedUsers} />}
+        </React.Fragment>
+    );
 }
 
 export default Users;
