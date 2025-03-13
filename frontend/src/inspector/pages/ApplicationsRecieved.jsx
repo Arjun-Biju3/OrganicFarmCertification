@@ -16,7 +16,7 @@ function Applications() {
         const fetchApplications = async () => {
             try {
                 const responseData = await sendRequest(
-                    "http://localhost:5000/api/inspector/applications/all",
+                    "https://organicfarmcertification.onrender.com/api/inspector/applications/all",
                     'GET', 
                     null, 
                     { 
@@ -43,7 +43,7 @@ function Applications() {
         }
         try {
             const responseData = await sendRequest(
-                `http://localhost:5000/api/inspector/searchResult/${searchTerm}`,
+                `https://organicfarmcertification.onrender.com/api/inspector/searchResult/${searchTerm}`,
                 'GET',
                 null,
                 {

@@ -63,7 +63,7 @@ function NewApplication() {
 
     try {
       await sendRequest(
-        'http://localhost:5000/api/users/application/new', 
+        'https://organicfarmcertification.onrender.com/api/users/application/new', 
         'POST',
         JSON.stringify(applicationData),
         { 

@@ -15,7 +15,7 @@ const Certificate = () => {
     const fetchCertificate = async () => {
       try {
         const responseData = await sendRequest(
-          `http://localhost:5000/api/users/application/${id}`, 
+          `https://organicfarmcertification.onrender.com/api/users/application/${id}`, 
           "GET",
           null,
           {

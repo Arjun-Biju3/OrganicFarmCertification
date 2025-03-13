@@ -23,7 +23,7 @@ function ViewApplicationDetails() {
     const fetchApplication = async () => {
       try {
         const responseData = await sendRequest(
-          `http://localhost:5000/api/inspector/details/${ApplicationId}`,
+          `https://organicfarmcertification.onrender.com/api/inspector/details/${ApplicationId}`,
           "GET",
           null,
           {
@@ -73,7 +73,7 @@ function ViewApplicationDetails() {
     
     try {
       await sendRequest(
-        `http://localhost:5000/api/inspector/changeStatus/${ApplicationId}`,
+        `https://organicfarmcertification.onrender.com/api/inspector/changeStatus/${ApplicationId}`,
         "PATCH",
         JSON.stringify(requestBody),
         {

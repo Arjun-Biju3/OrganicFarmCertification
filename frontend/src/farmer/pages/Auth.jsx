@@ -54,7 +54,7 @@ function Auth() {
         if (isLoginMode) {
             try {
                 const responseData = await sendRequest(
-                    "http://localhost:5000/api/users/login",
+                    "https://organicfarmcertification.onrender.com/api/users/login",
                     "POST",
                     JSON.stringify({
                         email: formState.inputs.email.value,
@@ -72,7 +72,7 @@ function Auth() {
         } else {
             try {
                 const responseData = await sendRequest(
-                    "http://localhost:5000/api/users/signup",
+                    "https://organicfarmcertification.onrender.com/api/users/signup",
                     "POST",
                     JSON.stringify({
                         name: formState.inputs.name.value,

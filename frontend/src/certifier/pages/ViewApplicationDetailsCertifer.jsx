@@ -26,7 +26,7 @@ function ViewApplicationDetailsCertifier() {
     const fetchApplication = async () => {
       try {
         const responseData = await sendRequest(
-          `http://localhost:5000/api/certifier/details/${ApplicationId}`,
+          `https://organicfarmcertification.onrender.com/api/certifier/details/${ApplicationId}`,
           "GET",
           null,
           {
@@ -74,7 +74,7 @@ function ViewApplicationDetailsCertifier() {
     };
     try {
       await sendRequest(
-        `http://localhost:5000/api/certifier/changeStatus/${ApplicationId}`,
+        `https://organicfarmcertification.onrender.com/api/certifier/changeStatus/${ApplicationId}`,
         "PATCH",
         JSON.stringify(requestBody),
         {

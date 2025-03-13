@@ -18,7 +18,7 @@ function ApplicationDetails() {
     const fetchApplication = async () => {
       try {
         const responseData = await sendRequest(
-          `http://localhost:5000/api/users/application/${appId}`,
+          `https://organicfarmcertification.onrender.com/api/users/application/${appId}`,
           "GET",
           null,
           {
