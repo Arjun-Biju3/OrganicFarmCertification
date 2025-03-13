@@ -1,46 +1,60 @@
 import { useCallback, useEffect, useState } from "react";
 
-let logoutTimer;
 
-export const useAuth = ()=>{
+
+export const useAuth = () => {
+  const [role, setRole] = useState();
   const [token, setToken] = useState(false);
-  const [tokenExpirationDate,setTokenExpirationDate] = useState();
+  const [tokenExpirationDate, setTokenExpirationDate] = useState();
   const [userId, setUserId] = useState(false);
 
- 
-
-  const login = useCallback((uid, token,expirationDate) => {
+  const login = useCallback((uid, token, role, expirationDate) => {
     setToken(token);
     setUserId(uid);
-    const tokenExpirationDate = expirationDate || new Date(new Date().getTime() + 1000 * 60 * 60);
-    setTokenExpirationDate(tokenExpirationDate);
-    localStorage.setItem('userData',JSON.stringify({userId:uid, token:token, expiration:tokenExpirationDate.toISOString()}));
+
+    
+    setRole(role);  // Set role here
+
+    console.log("Role at login:",role);
+
+    const tokenExpDate =
+      expirationDate || new Date(new Date().getTime() + 1000 * 60 * 60);
+    setTokenExpirationDate(tokenExpDate);
+
+    localStorage.setItem(
+      "userData",
+      JSON.stringify({
+        userId: uid,
+        token: token,
+        role: role, // Store role in localStorage
+        expiration: tokenExpDate.toISOString(),
+      })
+    );
   }, []);
 
   const logout = useCallback(() => {
     setToken(null);
     setTokenExpirationDate(null);
     setUserId(null);
-    localStorage.removeItem('userData');
+    setRole(""); 
+    localStorage.removeItem("userData");
   }, []);
 
-
-  useEffect(()=>{
-    if(token && tokenExpirationDate){
-      const remainingTime = tokenExpirationDate.getTime() - new Date().getTime();
-      logoutTimer = setTimeout(logout,remainingTime)
-    }else{
-      clearTimeout(logoutTimer);
+  useEffect(() => {
+    const storedData = JSON.parse(localStorage.getItem("userData"));
+    if (
+      storedData &&
+      storedData.token &&
+      new Date(storedData.expiration) > new Date()
+    ) {
+      login(
+        storedData.userId,
+        storedData.token,
+        storedData.role, // Retrieve role
+        new Date(storedData.expiration)
+      );
     }
-  },[token,logout,tokenExpirationDate]);
+  }, [login]);
 
-
-  useEffect(()=>{
-    const storedData = JSON.parse(localStorage.getItem('userData'));
-    if(storedData && storedData.token && new Date(storedData.expiration) > new Date()){
-      login(storedData.userId,storedData.token,new Date(storedData.expiration))
-    }
-  },[login]);
-
-  return {token,login,logout,userId};
-}
+  return { role, token, login, logout, userId };
+};

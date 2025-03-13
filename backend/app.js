@@ -5,8 +5,9 @@ const fs = require('fs/promises');
 const path = require('path');
 
 
-const placesRoutes = require('./routes/places-routes')
+const inspectorRoutes = require('./routes/inspector-routes')
 const usersRoutes = require('./routes/users-routes')
+const certifierRoutes = require('./routes/certifier-routes')
 const HttError = require("./models/http-error")
 
 const port = process.env.PORT || 5000
@@ -24,8 +25,9 @@ app.use((req,res,next)=>{
     next();
 });
 
-app.use('/api/places',placesRoutes); //=>/api/places/..
+app.use('/api/inspector',inspectorRoutes); 
 app.use('/api/users',usersRoutes);
+app.use('/api/certifier',certifierRoutes)
 
 
 app.use((req, res, next)=>{
@@ -47,7 +49,7 @@ app.use((error, req, res, next)=>{
     res.json({message:error.message || "An unknown error occured"});
 })
 
-mongoose.connect("mongodb+srv://arjunbiju322:N0fz9tM39vjsM3L7@cluster0.gey9y.mongodb.net/placesdb?retryWrites=true&w=majority&appName=Cluster0").then(()=>{
+mongoose.connect("mongodb+srv://arjunbiju322:N0fz9tM39vjsM3L7@cluster0.gey9y.mongodb.net/farmdb?retryWrites=true&w=majority&appName=Cluster0").then(()=>{
     app.listen(port);
 }).catch(err=>{
     console.log(err);
